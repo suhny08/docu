@@ -8,8 +8,9 @@ async function init(){
   questions=await fetch("./questions.json",{cache:"no-store"}).then(r=>r.json());
   const d=today();
   current=questions.filter(q=>q.date<=d).sort((a,b)=>b.date.localeCompare(a.date))[0]||questions[0];
-  renderToday();
   bindGlobal();
+  renderSidebar();
+  renderQuestion(current.id);
 }
 
 function history(){try{return JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]")}catch{return []}}
@@ -18,12 +19,28 @@ function saveHistory(item){
   list.push(item);
   localStorage.setItem(HISTORY_KEY,JSON.stringify(list.sort((a,b)=>a.date.localeCompare(b.date))));
 }
-function esc(s=""){return s.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]))}
+function esc(s=""){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]))}
 
-function renderToday(){
-  answers={};
+function renderSidebar(){
+  const list=history().sort((a,b)=>b.date.localeCompare(a.date));
+  $("#historyList").innerHTML=list.length?list.map(x=>`
+    <button class="history-item ${current&&x.questionId===current.id?"active":""}" data-id="${esc(x.questionId)}">
+      <div class="history-date">${esc(x.date)}</div>
+      <div class="history-topic">${esc(x.topic)}</div>
+      <div class="history-score">${x.graded?`객관식 ${x.score}/${x.graded}`:"완료"}</div>
+    </button>`).join(""):`<div class="empty-history">아직 학습기록이 없습니다.<br>오늘 문제를 풀면 여기에 쌓입니다.</div>`;
+  document.querySelectorAll(".history-item").forEach(btn=>btn.onclick=()=>{
+    renderQuestion(btn.dataset.id);
+    closeSidebar();
+  });
+}
+
+function renderQuestion(questionId){
+  const q=questions.find(x=>x.id===questionId);
+  if(!q)return;
+  current=q;
   const old=history().find(x=>x.questionId===current.id);
-  $("#todayView").classList.remove("hidden"); $("#historyView").classList.add("hidden");
+  answers=old?{...old.answers}:{};
   $("#todayView").innerHTML=`
   <article class="card">
     <div class="meta"><span class="tag">${esc(current.date)}</span><span class="tag">${esc(current.topic)}</span><span class="tag">${esc(current.company)}</span></div>
@@ -33,27 +50,31 @@ function renderToday(){
     <h3>적용 규정 · 원칙</h3>
     <div class="rule">${esc(current.rule.summary)}</div>
     <div id="questions"></div>
-    <button id="submitBtn" class="primary">판단 제출</button>
+    <button id="submitBtn" class="primary">${old?"다시 제출":"판단 제출"}</button>
     <div id="result"></div>
   </article>`;
+
   const qBox=$("#questions");
-  current.questions.forEach((q,i)=>{
+  current.questions.forEach((item,i)=>{
     const el=document.createElement("div"); el.className="question";
-    el.innerHTML=`<div class="question-title">Q${i+1}. ${esc(q.prompt)}</div>`;
-    if(q.type==="choice"){
-      q.options.forEach((op,idx)=>{
+    el.innerHTML=`<div class="question-title">Q${i+1}. ${esc(item.prompt)}</div>`;
+    if(item.type==="choice"){
+      item.options.forEach((op,idx)=>{
         const b=document.createElement("button"); b.className="option"; b.textContent=op;
-        b.onclick=()=>{answers[q.id]=idx; el.querySelectorAll(".option").forEach(x=>x.classList.remove("selected")); b.classList.add("selected")};
+        if(answers[item.id]===idx)b.classList.add("selected");
+        b.onclick=()=>{answers[item.id]=idx; el.querySelectorAll(".option").forEach(x=>x.classList.remove("selected")); b.classList.add("selected")};
         el.appendChild(b);
       });
     }else{
       const ta=document.createElement("textarea"); ta.className="text-answer"; ta.placeholder="한 문장으로 적어보세요.";
-      ta.oninput=()=>answers[q.id]=ta.value; el.appendChild(ta);
+      ta.value=answers[item.id]||"";
+      ta.oninput=()=>answers[item.id]=ta.value; el.appendChild(ta);
     }
     qBox.appendChild(el);
   });
   $("#submitBtn").onclick=submit;
-  if(old) showResult(old);
+  if(old)showResult(old);
+  renderSidebar();
 }
 
 function submit(){
@@ -61,8 +82,10 @@ function submit(){
   if(unanswered){alert("모든 질문에 답해 주세요.");return}
   let score=0, graded=0;
   current.questions.forEach(q=>{if(q.type==="choice"){graded++; if(answers[q.id]===q.answer)score++;}});
-  const item={questionId:current.id,date:current.date,topic:current.topic,title:current.title,answers,score,graded,completedAt:new Date().toISOString()};
-  saveHistory(item); showResult(item);
+  const item={questionId:current.id,date:current.date,topic:current.topic,title:current.title,answers:{...answers},score,graded,completedAt:new Date().toISOString()};
+  saveHistory(item);
+  showResult(item);
+  renderSidebar();
 }
 
 function showResult(item){
@@ -77,21 +100,21 @@ function showResult(item){
     </div>`;
 }
 
-function renderHistory(){
-  $("#todayView").classList.add("hidden"); $("#historyView").classList.remove("hidden");
-  const list=history().sort((a,b)=>b.date.localeCompare(a.date));
-  $("#historyView").innerHTML=`<div class="card"><h2>학습기록</h2>${list.length?list.map(x=>`<div class="history-row"><strong>${esc(x.date)} · ${esc(x.topic)}</strong><div>${esc(x.title)}</div><small>${x.graded?`객관식 ${x.score}/${x.graded}`:"완료"} · ${new Date(x.completedAt).toLocaleString("ko-KR")}</small></div>`).join(""):"<p>아직 기록이 없습니다.</p>"}</div>`;
-}
+function openSidebar(){ $("#sidebar").classList.add("open"); $("#sidebarBackdrop").classList.remove("hidden"); }
+function closeSidebar(){ $("#sidebar").classList.remove("open"); $("#sidebarBackdrop").classList.add("hidden"); }
 
 function bindGlobal(){
-  $("#historyBtn").onclick=()=>$("#historyView").classList.contains("hidden")?renderHistory():renderToday();
+  $("#menuBtn").onclick=openSidebar;
+  $("#closeSidebarBtn").onclick=closeSidebar;
+  $("#sidebarBackdrop").onclick=closeSidebar;
   $("#exportBtn").onclick=()=>{
     const blob=new Blob([JSON.stringify(history(),null,2)],{type:"application/json"});
     const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=`docu-history-${today()}.json`; a.click(); URL.revokeObjectURL(a.href);
   };
   $("#importInput").onchange=async e=>{
     const f=e.target.files[0]; if(!f)return;
-    try{const data=JSON.parse(await f.text()); if(!Array.isArray(data))throw 0; localStorage.setItem(HISTORY_KEY,JSON.stringify(data)); alert("복원 완료"); renderToday()}catch{alert("올바른 백업 파일이 아닙니다.")}
+    try{const data=JSON.parse(await f.text()); if(!Array.isArray(data))throw 0; localStorage.setItem(HISTORY_KEY,JSON.stringify(data)); alert("복원 완료"); renderSidebar(); renderQuestion(current.id)}catch{alert("올바른 백업 파일이 아닙니다.")}
   };
 }
+
 init().catch(()=>{$("#todayView").innerHTML='<div class="card"><h2>문제를 불러오지 못했습니다.</h2><p>잠시 후 다시 시도해 주세요.</p></div>'});
