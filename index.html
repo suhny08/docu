@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="robots" content="noindex,nofollow,noarchive" />
+  <meta name="theme-color" content="#ffffff" />
+  <title>Daily Judgment</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">FINANCIAL JUDGMENT TRAINING</p>
+      <h1>오늘의 판단</h1>
+    </div>
+    <button id="historyBtn" class="ghost">기록</button>
+  </header>
+
+  <main class="container">
+    <section id="todayView"></section>
+    <section id="historyView" class="hidden"></section>
+  </main>
+
+  <footer class="footer">
+    <button id="exportBtn" class="ghost">기록 백업</button>
+    <label class="ghost file-label">기록 복원<input id="importInput" type="file" accept="application/json" /></label>
+  </footer>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>
