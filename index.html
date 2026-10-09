@@ -10,23 +10,35 @@
 </head>
 <body>
   <header class="topbar">
+    <button id="menuBtn" class="ghost menu-btn" aria-label="학습기록 열기">☰</button>
     <div>
       <p class="eyebrow">FINANCIAL JUDGMENT TRAINING</p>
       <h1>오늘의 판단</h1>
     </div>
-    <button id="historyBtn" class="ghost">기록</button>
   </header>
 
-  <main class="container">
-    <section id="todayView"></section>
-    <section id="historyView" class="hidden"></section>
-  </main>
+  <div class="layout">
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-head">
+        <div>
+          <p class="eyebrow">STUDY HISTORY</p>
+          <h2>학습기록</h2>
+        </div>
+        <button id="closeSidebarBtn" class="ghost close-btn" aria-label="학습기록 닫기">×</button>
+      </div>
+      <div id="historyList" class="history-list"></div>
+      <div class="sidebar-actions">
+        <button id="exportBtn" class="ghost">기록 백업</button>
+        <label class="ghost file-label">기록 복원<input id="importInput" type="file" accept="application/json" /></label>
+      </div>
+    </aside>
 
-  <footer class="footer">
-    <button id="exportBtn" class="ghost">기록 백업</button>
-    <label class="ghost file-label">기록 복원<input id="importInput" type="file" accept="application/json" /></label>
-  </footer>
+    <main class="container">
+      <section id="todayView"></section>
+    </main>
+  </div>
 
+  <div id="sidebarBackdrop" class="sidebar-backdrop hidden"></div>
   <script src="./app.js" defer></script>
 </body>
 </html>
